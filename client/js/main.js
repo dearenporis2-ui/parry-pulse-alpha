@@ -469,10 +469,17 @@ function loop(now) {
 
   // Local player renders at its predicted (instant-feeling) position rather
   // than the interpolated/delayed server one; everyone else is unaffected.
+  // Facing angle is likewise taken straight from local input instead of the
+  // server echo, since aiming should never wait on a round-trip either.
   if (predicted) {
     const localIndex = players.findIndex((p) => p.id === localPlayerId);
     if (localIndex >= 0) {
-      players[localIndex] = { ...players[localIndex], x: predicted.x, y: predicted.y };
+      players[localIndex] = {
+        ...players[localIndex],
+        x: predicted.x,
+        y: predicted.y,
+        angle: input ? input.angle : players[localIndex].angle,
+      };
     }
   }
 
