@@ -17,6 +17,18 @@ export const KATANA_ARC_DEG = 120;
 
 export const INTERP_DELAY_MS = 80;     // render this far in the past for smooth interpolation
 
+// --- Client-side prediction ---
+// These must match server/constants.js exactly, or the local player will
+// visibly drift from the authoritative position and get corrected/snapped.
+export const PLAYER_SPEED = 230;
+export const PLAYER_SPEED_SWINGING = 170;
+export const PLAYER_SPEED_RECOVERING = 90;
+export const PLAYER_ACCELERATION = 1450;
+export const PLAYER_BRAKE = 820;
+
+export const RECONCILE_SNAP_PX = 60;   // server/predicted gap bigger than this = teleport, snap instantly
+export const RECONCILE_LERP = 0.18;    // otherwise, correct this fraction of the gap per server update
+
 export const COLORS = {
   bg: '#0b0e14',
   grid: '#141a24',

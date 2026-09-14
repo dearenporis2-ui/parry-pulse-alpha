@@ -10,7 +10,11 @@ import { Network } from './network.js';
 import { Input } from './input.js';
 import { Renderer } from './renderer.js';
 import { JuiceManager } from './juiceManager.js';
-import { TEAM_COLORS, INTERP_DELAY_MS } from './constants.js';
+import {
+  TEAM_COLORS, INTERP_DELAY_MS, PLAYER_RADIUS,
+  PLAYER_SPEED, PLAYER_SPEED_SWINGING, PLAYER_SPEED_RECOVERING,
+  PLAYER_ACCELERATION, PLAYER_BRAKE, RECONCILE_SNAP_PX, RECONCILE_LERP,
+} from './constants.js';
 
 // ---------------------------------------------------------------------------
 // DOM references
@@ -53,6 +57,99 @@ let curSnapshot = null;
 let latestRound = { scoreA: 0, scoreB: 0, active: false, timeLeft: 0 };
 let matchOver = false;
 let selectedAbility = 'blink';
+
+// ---------------------------------------------------------------------------
+// Client-side prediction (local player only)
+// The server is still fully authoritative — this just renders the local
+// player's movement instantly instead of waiting for a round-trip, then
+// quietly corrects toward whatever the server says actually happened.
+// ---------------------------------------------------------------------------
+let predicted = null; // { x, y, vx, vy }
+
+function circleRectOverlap(cx, cy, radius, rect) {
+  const closestX = Math.max(rect.x, Math.min(cx, rect.x + rect.w));
+  const closestY = Math.max(rect.y, Math.min(cy, rect.y + rect.h));
+  const dx = cx - closestX;
+  const dy = cy - closestY;
+  return (dx * dx + dy * dy) < radius * radius;
+}
+
+function collidesObstacle(x, y, radius) {
+  if (!arena) return false;
+  return arena.obstacles.some((rect) => circleRectOverlap(x, y, radius, rect));
+}
+
+function resolveCollision(nx, ny, ox, oy, radius) {
+  return collidesObstacle(nx, ny, radius) ? { x: ox, y: oy } : { x: nx, y: ny };
+}
+
+function currentPredictedSpeed(state) {
+  if (state === 'swinging') return PLAYER_SPEED_SWINGING;
+  if (state === 'recovering') return PLAYER_SPEED_RECOVERING;
+  return PLAYER_SPEED;
+}
+
+// Mirrors GameRoom._updatePlayers' movement math exactly (same accel/brake/
+// collision), so predicted and authoritative positions rarely diverge.
+function stepPrediction(dt) {
+  if (!predicted || !input || !arena) return;
+
+  let dx = 0, dy = 0;
+  if (input.keys.up) dy -= 1;
+  if (input.keys.down) dy += 1;
+  if (input.keys.left) dx -= 1;
+  if (input.keys.right) dx += 1;
+
+  const localServerState = curSnapshot?.players.find((p) => p.id === localPlayerId)?.state || 'idle';
+  const speed = currentPredictedSpeed(localServerState);
+
+  if (dx !== 0 || dy !== 0) {
+    const len = Math.hypot(dx, dy);
+    const targetX = (dx / len) * speed;
+    const targetY = (dy / len) * speed;
+    const step = PLAYER_ACCELERATION * dt;
+    predicted.vx += Math.max(-step, Math.min(step, targetX - predicted.vx));
+    predicted.vy += Math.max(-step, Math.min(step, targetY - predicted.vy));
+  } else {
+    const curSpeed = Math.hypot(predicted.vx, predicted.vy);
+    const nextSpeed = Math.max(0, curSpeed - PLAYER_BRAKE * dt);
+    if (curSpeed > 0) {
+      predicted.vx *= nextSpeed / curSpeed;
+      predicted.vy *= nextSpeed / curSpeed;
+    }
+  }
+
+  const movedX = resolveCollision(predicted.x + predicted.vx * dt, predicted.y, predicted.x, predicted.y, PLAYER_RADIUS);
+  if (movedX.x === predicted.x) predicted.vx = 0;
+  predicted.x = movedX.x;
+  const movedY = resolveCollision(predicted.x, predicted.y + predicted.vy * dt, predicted.x, predicted.y, PLAYER_RADIUS);
+  if (movedY.y === predicted.y) predicted.vy = 0;
+  predicted.y = movedY.y;
+
+  predicted.x = Math.max(PLAYER_RADIUS, Math.min(arena.width - PLAYER_RADIUS, predicted.x));
+  predicted.y = Math.max(PLAYER_RADIUS, Math.min(arena.height - PLAYER_RADIUS, predicted.y));
+}
+
+// Small drift gets smoothly nudged away each server update; large gaps
+// (dash, dash strike, blink, knockback) snap instantly so movement never
+// looks like it's fighting itself.
+function reconcilePredicted(serverPlayer) {
+  if (!serverPlayer) return;
+  if (!predicted) {
+    predicted = { x: serverPlayer.x, y: serverPlayer.y, vx: 0, vy: 0 };
+    return;
+  }
+  const gap = Math.hypot(serverPlayer.x - predicted.x, serverPlayer.y - predicted.y);
+  if (gap > RECONCILE_SNAP_PX) {
+    predicted.x = serverPlayer.x;
+    predicted.y = serverPlayer.y;
+    predicted.vx = serverPlayer.vx || 0;
+    predicted.vy = serverPlayer.vy || 0;
+  } else {
+    predicted.x += (serverPlayer.x - predicted.x) * RECONCILE_LERP;
+    predicted.y += (serverPlayer.y - predicted.y) * RECONCILE_LERP;
+  }
+}
 
 abilityChoices.forEach((button) => button.addEventListener('click', () => {
   selectedAbility = button.dataset.ability;
@@ -120,6 +217,7 @@ network.on('state', (msg) => {
   scoreBEl.textContent = latestRound.scoreB;
   roundTimerEl.textContent = Math.ceil(latestRound.timeLeft / 1000);
   const localPlayerState = msg.players.find((p) => p.id === localPlayerId);
+  reconcilePredicted(localPlayerState);
   updateDashMeter(localPlayerState);
   updateStrikeMeter(localPlayerState);
   updateAbilityMeter(localPlayerState);
@@ -342,6 +440,7 @@ function getInterpolatedState() {
 }
 
 function getLocalScreenPos() {
+  if (predicted) return { x: predicted.x, y: predicted.y };
   if (!curSnapshot) return null;
   const p = curSnapshot.players.find((p) => p.id === localPlayerId);
   return p ? { x: p.x, y: p.y } : null;
@@ -364,8 +463,18 @@ function loop(now) {
 
   if (input) input.tick(now);
   juice.update(dt);
+  stepPrediction(dt);
 
   const { players, bullets, gunPickups } = getInterpolatedState();
+
+  // Local player renders at its predicted (instant-feeling) position rather
+  // than the interpolated/delayed server one; everyone else is unaffected.
+  if (predicted) {
+    const localIndex = players.findIndex((p) => p.id === localPlayerId);
+    if (localIndex >= 0) {
+      players[localIndex] = { ...players[localIndex], x: predicted.x, y: predicted.y };
+    }
+  }
 
   // Cheap cosmetic dust puffs under the local player while moving.
   const localPlayer = players.find((p) => p.id === localPlayerId);
