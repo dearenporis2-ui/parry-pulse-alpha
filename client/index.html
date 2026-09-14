@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PARRY-PULSE</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ================= JOIN SCREEN ================= -->
+  <div id="joinScreen" class="overlay-screen">
+    <div class="join-card">
+      <h1 class="title">PARRY<span class="title-accent">-</span>PULSE</h1>
+      <p class="subtitle">2v2 Revolver &amp; Katana Arena</p>
+
+      <input id="nameInput" type="text" maxlength="16" placeholder="Callsign" autocomplete="off" />
+      <div class="ability-picker" aria-label="Choose an ability">
+        <button class="ability-choice selected" data-ability="blink"><b>BLINK</b><span>Teleport to your crosshair</span></button>
+        <button class="ability-choice" data-ability="pulse"><b>KINETIC PULSE</b><span>Blast nearby enemies away</span></button>
+      </div>
+      <button id="joinButton">ENTER ARENA</button>
+
+      <div class="controls-hint">
+        <div><b>WASD</b> — Move</div>
+        <div><b>Mouse</b> — Aim</div>
+        <div><b>Left Click</b> — Revolver</div>
+        <div><b>Right Click</b> — Katana Slash / Parry</div>
+        <div><b>Shift / Space</b> — Dash (3 charges)</div>
+        <div><b>1 / 2 or Mouse Wheel</b> — Equip Revolver / Katana</div>
+        <div><b>Katana + Left Click</b> — Dash Strike (can be parried)</div>
+      </div>
+      <div id="joinStatus" class="join-status"></div>
+    </div>
+  </div>
+
+  <!-- ================= GAME ================= -->
+  <div id="gameContainer" class="hidden">
+    <canvas id="gameCanvas" width="1600" height="900"></canvas>
+
+    <!-- HUD overlay (HTML, not canvas — easier to style/update for text) -->
+    <div id="hud">
+      <div id="scoreBar">
+        <span id="scoreA" class="score score-a">0</span>
+        <span id="roundTimer">90</span>
+        <span id="scoreB" class="score score-b">0</span>
+      </div>
+
+      <div id="cooldownHint" class="cooldown-hint"></div>
+      <div id="dashMeter" class="dash-meter" aria-label="Dash charges"></div>
+      <div id="strikeMeter" class="strike-meter" aria-label="Dash strike energy"></div>
+      <div id="weaponMode" class="weapon-mode sword">KATANA · LEFT CLICK: DASH STRIKE</div>
+      <div id="abilityMeter" class="ability-meter"></div>
+
+      <div id="connectionStatus" class="connection-status"></div>
+    </div>
+
+    <!-- Banners for round/match transitions -->
+    <div id="banner" class="banner hidden"></div>
+
+    <div id="restartPrompt" class="restart-prompt hidden">
+      <button id="restartButton">PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

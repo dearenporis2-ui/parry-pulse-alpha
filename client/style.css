@@ -1,0 +1,247 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #05070a;
+  color: #e2e8f0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+.hidden { display: none !important; }
+
+/* ---------------- Join Screen ---------------- */
+
+.overlay-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 30%, #131a26 0%, #05070a 70%);
+  z-index: 100;
+}
+
+.join-card {
+  background: rgba(15, 20, 30, 0.85);
+  border: 1px solid #2a3345;
+  border-radius: 12px;
+  padding: 40px 48px;
+  text-align: center;
+  box-shadow: 0 0 60px rgba(63, 208, 255, 0.08);
+}
+
+.title {
+  font-size: 42px;
+  letter-spacing: 4px;
+  margin: 0;
+  color: #f1f5f9;
+}
+
+.title-accent { color: #ff5b6e; }
+
+.subtitle {
+  margin: 4px 0 24px;
+  color: #94a3b8;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+#nameInput {
+  display: block;
+  width: 240px;
+  margin: 0 auto 16px;
+  padding: 10px 14px;
+  background: #0b0e14;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #f1f5f9;
+  font-size: 15px;
+  text-align: center;
+}
+
+#joinButton, #restartButton {
+  width: 240px;
+  padding: 12px;
+  background: linear-gradient(135deg, #3fd0ff, #2b8fd9);
+  border: none;
+  border-radius: 6px;
+  color: #04121a;
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+#joinButton:hover, #restartButton:hover { transform: translateY(-1px); }
+#joinButton:active, #restartButton:active { transform: translateY(1px); }
+
+.controls-hint {
+  margin-top: 24px;
+  text-align: left;
+  display: inline-grid;
+  gap: 4px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.join-status {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #ff8a8a;
+  min-height: 16px;
+}
+.ability-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 auto 16px; width: 310px; }
+.ability-choice { min-height: 62px; padding: 8px; color: #94a3b8; background: #0b0e14; border: 1px solid #334155; border-radius: 6px; cursor: pointer; font-size: 10px; }
+.ability-choice b, .ability-choice span { display: block; }
+.ability-choice b { margin-bottom: 4px; color: #e2e8f0; letter-spacing: .5px; }
+.ability-choice.selected { border-color: #f2bf55; box-shadow: 0 0 14px rgba(242,191,85,.18); }
+.ability-choice.selected b { color: #ffe28a; }
+
+/* ---------------- Game ---------------- */
+
+#gameContainer {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+#gameCanvas {
+  width: min(100vw, 177.78vh);
+  height: min(100vh, 56.25vw);
+  display: block;
+  background: #0b0e14;
+  cursor: crosshair;
+}
+
+#hud {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  padding-top: 14px;
+}
+
+#scoreBar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: rgba(10, 13, 20, 0.7);
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 6px 20px;
+  font-family: 'Consolas', monospace;
+}
+
+.score {
+  font-size: 26px;
+  font-weight: 700;
+  min-width: 28px;
+  text-align: center;
+}
+.score-a { color: #3fd0ff; }
+.score-b { color: #ff5b6e; }
+
+#roundTimer {
+  font-size: 16px;
+  color: #94a3b8;
+  min-width: 30px;
+  text-align: center;
+}
+
+.cooldown-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #64748b;
+  height: 14px;
+}
+
+.dash-meter {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border: 1px solid rgba(63, 208, 255, 0.25);
+  border-radius: 6px;
+  background: rgba(5, 10, 16, 0.72);
+  font: 700 10px/1 Consolas, monospace;
+}
+.dash-label { margin-right: 3px; color: #94a3b8; letter-spacing: 1px; }
+.dash-charge { width: 19px; height: 12px; display: grid; place-items: center; border-radius: 2px; font-size: 9px; }
+.dash-charge.ready { background: #3fd0ff; box-shadow: 0 0 9px rgba(63, 208, 255, 0.9); }
+.dash-charge.cooling { color: #94a3b8; background: #1e293b; }
+
+.strike-meter {
+  margin-top: 6px;
+  min-width: 170px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid rgba(242, 191, 85, 0.3);
+  border-radius: 5px;
+  background: rgba(5, 10, 16, 0.72);
+  font: 700 9px/1 Consolas, monospace;
+}
+.strike-label { color: #f2bf55; letter-spacing: 0.5px; white-space: nowrap; }
+.strike-track { flex: 1; height: 6px; overflow: hidden; border-radius: 3px; background: #252b35; }
+.strike-fill { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #e47f37, #ffe28a); box-shadow: 0 0 8px rgba(255, 210, 100, 0.75); transition: width 0.08s linear; }
+.strike-value { min-width: 20px; color: #fff3c4; text-align: right; }
+.ability-meter { margin-top: 6px; padding: 5px 9px; border: 1px solid #334155; border-radius: 5px; background: rgba(5,10,16,.72); color: #64748b; font: 700 10px/1 Consolas, monospace; letter-spacing: .4px; }
+.ability-meter.ready { color: #c4b5fd; border-color: rgba(196,181,253,.45); box-shadow: 0 0 10px rgba(196,181,253,.13); }
+
+.weapon-mode {
+  margin-top: 6px;
+  padding: 5px 9px;
+  border-radius: 5px;
+  background: rgba(5, 10, 16, 0.72);
+  font: 700 10px/1 Consolas, monospace;
+  letter-spacing: 0.6px;
+}
+.weapon-mode.sword { color: #f2bf55; border: 1px solid rgba(242, 191, 85, 0.32); }
+.weapon-mode.revolver { color: #3fd0ff; border: 1px solid rgba(63, 208, 255, 0.32); }
+
+.connection-status {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 11px;
+  color: #64748b;
+  pointer-events: none;
+}
+
+.banner {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-align: center;
+  text-shadow: 0 0 20px rgba(0,0,0,0.8), 0 0 40px currentColor;
+  pointer-events: none;
+  animation: bannerPop 0.25s ease-out;
+}
+
+@keyframes bannerPop {
+  from { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+  to   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.restart-prompt {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
